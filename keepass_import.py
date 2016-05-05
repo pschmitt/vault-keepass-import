@@ -114,6 +114,7 @@ def export_to_vault(keepass_db, keepass_password, vault_url, vault_token,
     client = hvac.Client(
         url=vault_url, token=vault_token, verify=ssl_verify
     )
+    ignored_indexes = ['_entry_name', '_path', 'Title']
     for e in entries:
         logger.debug(
             'Insert: {} to {}'.format(
@@ -123,7 +124,7 @@ def export_to_vault(keepass_db, keepass_password, vault_url, vault_token,
         )
         client.write(
             '{}/{}/{}'.format(vault_backend, e['_path'], e['_entry_name']),
-            **{k: v for k, v in e.items() if k not in ['_entry_name', '_path']}
+            **{k: v for k, v in e.items() if k not in ignored_indexes}
         )
 
 
