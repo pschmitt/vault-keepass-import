@@ -1,2 +1,5 @@
 *.pyc
 .ropeproject/
+build/
+dist/
+*.spec
