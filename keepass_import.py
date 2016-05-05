@@ -148,14 +148,14 @@ def export_to_vault(keepass_db, keepass_password, keepass_keyfile,
     ]
     for e in entries:
         cleaned_entry = {k: v for k, v in e.items() if k not in ignored_indexes}
+        entry_path = '{}/{}/{}'.format(
+            vault_backend, e['_path'], e['_entry_name']
+        )
         logger.debug(
             'INSERT: "{}" to "{}"'.format(
                 e['_entry_name'],
-                e['_path']
+                entry_path
             )
-        )
-        entry_path = '{}/{}/{}'.format(
-            vault_backend, e['_path'], e['_entry_name']
         )
         if client.read(entry_path):
             logger.error('Entry {} already exists'.format(entry_path))
