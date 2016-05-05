@@ -56,7 +56,7 @@ def get_group_name(group):
     return group.find('Name').text
 
 
-def export_entries_from_group(xmldata, group, parent_name=None):
+def export_entries_from_group(xmldata, group, parent_name=None, force_lowercase=False):
     group_name = get_group_name(group)
     path = '{}{}'.format(
         parent_name if parent_name else '',
@@ -67,24 +67,26 @@ def export_entries_from_group(xmldata, group, parent_name=None):
     total_entries = []
     for e in entries:
         ed = get_entry_details(e)
+        ed = dict((k.lower(), v) for k, v in ed.iteritems())
         ed['_entry_name'] = get_entry_name(e)
         ed['_path'] = '{}'.format(path)
         total_entries.append(ed)
     for g in groups:
         sub_entries = export_entries_from_group(
-            xmldata, g,
-            '{}/'.format(path if path else '')
+            xmldata, g, '{}/'.format(path if path else ''), force_lowercase
         )
         total_entries += sub_entries
     return total_entries
 
 
-def export_entries(filename, password, keyfile=None):
+def export_entries(filename, password, keyfile=None, force_lowercase=False):
     with libkeepass.open(filename, password=password, keyfile=keyfile) as kdb:
         xmldata = lxml.etree.fromstring(kdb.pretty_print())
         tree = lxml.etree.ElementTree(xmldata)
         root_group = tree.xpath('/KeePassFile/Root/Group')[0]
-        all_entries = export_entries_from_group(xmldata, root_group)
+        all_entries = export_entries_from_group(
+            xmldata, root_group, force_lowercase=force_lowercase
+        )
         logger.info('Total entries: {}'.format(len(all_entries)))
         return all_entries
 
@@ -109,12 +111,15 @@ def reset_vault_backend(vault_url, vault_token, vault_backend,
 
 
 def export_to_vault(keepass_db, keepass_password, vault_url, vault_token,
-                    vault_backend, ssl_verify=True):
-    entries = export_entries(keepass_db, keepass_password)
+                    vault_backend, ssl_verify=True, force_lowercase=False):
+    entries = export_entries(keepass_db, keepass_password, force_lowercase)
     client = hvac.Client(
         url=vault_url, token=vault_token, verify=ssl_verify
     )
-    ignored_indexes = ['_entry_name', '_path', 'Title']
+    ignored_indexes = [
+        '_entry_name', '_path',
+        'Title' if force_lowercase else 'title'
+    ]
     for e in entries:
         logger.debug(
             'Insert: {} to {}'.format(
@@ -163,6 +168,11 @@ if __name__ == '__main__':
         help='Erase the prefix prior to the import operation'
     )
     parser.add_argument(
+        '-l', '--lowercase',
+        action='store_true',
+        help='Force keys to be lowercased'
+    )
+    parser.add_argument(
         'KDBX',
         help='Path to the KeePass database'
     )
@@ -191,5 +201,6 @@ if __name__ == '__main__':
         vault_url=args.vault,
         vault_token=token,
         vault_backend=args.backend,
-        ssl_verify=args.ssl_no_verify
+        ssl_verify=args.ssl_no_verify,
+        force_lowercase=args.lowercase
     )
