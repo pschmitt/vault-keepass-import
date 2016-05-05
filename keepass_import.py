@@ -57,19 +57,23 @@ def get_group_name(group):
 
 
 def export_entries_from_group(xmldata, group, parent_name=None):
-    group_name = '{}{}'.format(parent_name if parent_name else '', get_group_name(group))
+    group_name = get_group_name(group)
+    path = '{}{}'.format(
+        parent_name if parent_name else '',
+        group_name if group_name else ''
+    )
     entries = group.findall('Entry')
     groups = group.findall('Group')
     total_entries = []
     for e in entries:
         ed = get_entry_details(e)
         ed['_entry_name'] = get_entry_name(e)
-        ed['_path'] = '{}{}'.format(parent_name, group_name)
+        ed['_path'] = '{}'.format(path)
         total_entries.append(ed)
     for g in groups:
         sub_entries = export_entries_from_group(
             xmldata, g,
-            '{}/'.format(group_name if group_name else '')
+            '{}/'.format(path if path else '')
         )
         total_entries += sub_entries
     return total_entries
@@ -119,7 +123,7 @@ def export_to_vault(keepass_db, keepass_password, vault_url, vault_token,
         )
         client.write(
             '{}/{}/{}'.format(vault_backend, e['_path'], e['_entry_name']),
-            password=e['Password']
+            **{k: v for k, v in e.items() if k not in ['_entry_name', '_path']}
         )
 
 
