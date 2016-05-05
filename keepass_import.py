@@ -68,8 +68,8 @@ def export_entries_from_group(xmldata, group, parent_name=None, force_lowercase=
     for e in entries:
         ed = get_entry_details(e)
         ed = dict((k.lower(), v) for k, v in ed.iteritems())
-        ed['_entry_name'] = get_entry_name(e)
-        ed['_path'] = '{}'.format(path)
+        ed['_entry_name'] = get_entry_name(e).strip()
+        ed['_path'] = '{}'.format(path).strip()
         total_entries.append(ed)
     for g in groups:
         sub_entries = export_entries_from_group(
