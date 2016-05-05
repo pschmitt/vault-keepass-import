@@ -202,7 +202,8 @@ if __name__ == '__main__':
     parser.add_argument(
         '-b', '--backend',
         default='keepass',
-        help='Vault backend (destination of the import)')
+        help='Vault backend (destination of the import)'
+    )
     parser.add_argument(
         '-e', '--erase',
         action='store_true',
