@@ -121,7 +121,7 @@ def export_to_vault(keepass_db, keepass_password, keepass_keyfile,
     )
     ignored_indexes = [
         '_entry_name', '_path',
-        'Title' if force_lowercase else 'title'
+        'title' if force_lowercase else 'Title'
     ]
     for e in entries:
         logger.debug(
