@@ -68,8 +68,8 @@ def export_entries_from_group(xmldata, group, parent_name=None, force_lowercase=
     for e in entries:
         ed = get_entry_details(e)
         ed = dict((k.lower(), v) for k, v in ed.iteritems())
-        ed['_entry_name'] = get_entry_name(e).strip()
-        ed['_path'] = '{}'.format(path).strip()
+        ed['_entry_name'] = get_entry_name(e).strip().strip('/').strip()
+        ed['_path'] = '{}'.format(path).strip().strip('/').strip()
         total_entries.append(ed)
     for g in groups:
         sub_entries = export_entries_from_group(
@@ -158,11 +158,16 @@ def export_to_vault(keepass_db, keepass_password, keepass_keyfile,
             )
         )
         if client.read(entry_path):
-            logger.error('Entry {} already exists'.format(entry_path))
+            # There already is an entry at this path
             next_entry_index = get_next_similar_entry_index(
                 vault_url, vault_token, entry_path, ssl_verify
             )
-            entry_path = '{} ({})'.format(entry_path, next_entry_index)
+            new_entry_path = '{} ({})'.format(entry_path, next_entry_index)
+            logger.info(
+                'Entry "{}" already exists, '
+                'creating a new one: "{}"'.format(entry_path, new_entry_path)
+            )
+            entry_path = new_entry_path
         client.write(
             entry_path,
             **cleaned_entry
