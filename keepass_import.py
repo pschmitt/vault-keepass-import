@@ -131,22 +131,26 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument(
         '-p', '--password',
-        required=False
+        required=False,
+        help='Password to unlock the KeePass database'
     )
     parser.add_argument(
         '-t', '--token',
         required=False,
-        default=os.getenv('VAULT_TOKEN', None)
+        default=os.getenv('VAULT_TOKEN', None),
+        help='Vault token'
     )
     parser.add_argument(
         '-v', '--vault',
         default=os.getenv('VAULT_ADDR', 'https://localhost:8200'),
-        required=False
+        required=False,
+        help='Vault URL'
     )
     parser.add_argument(
         '-k', '--ssl-no-verify',
         action='store_false',
-        required=False
+        required=False,
+        help='Whether to skip TLS cert verification'
     )
     parser.add_argument(
         '-b', '--backend',
@@ -157,7 +161,10 @@ if __name__ == '__main__':
         action='store_true',
         help='Erase the prefix prior to the import operation'
     )
-    parser.add_argument('KDBX')
+    parser.add_argument(
+        'KDBX',
+        help='Path to the KeePass database'
+    )
     args = parser.parse_args()
     password = args.password if args.password else getpass.getpass()
     if args.token:
