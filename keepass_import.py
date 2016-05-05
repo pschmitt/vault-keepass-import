@@ -110,9 +110,12 @@ def reset_vault_backend(vault_url, vault_token, vault_backend,
     )
 
 
-def export_to_vault(keepass_db, keepass_password, vault_url, vault_token,
-                    vault_backend, ssl_verify=True, force_lowercase=False):
-    entries = export_entries(keepass_db, keepass_password, force_lowercase)
+def export_to_vault(keepass_db, keepass_password, keepass_keyfile,
+                    vault_url, vault_token, vault_backend, ssl_verify=True,
+                    force_lowercase=False):
+    entries = export_entries(
+        keepass_db, keepass_password, keepass_keyfile, force_lowercase
+    )
     client = hvac.Client(
         url=vault_url, token=vault_token, verify=ssl_verify
     )
@@ -139,6 +142,11 @@ if __name__ == '__main__':
         '-p', '--password',
         required=False,
         help='Password to unlock the KeePass database'
+    )
+    parser.add_argument(
+        '-f', '--keyfile',
+        required=False,
+        help='Keyfile to unlock the KeePass database'
     )
     parser.add_argument(
         '-t', '--token',
@@ -198,6 +206,7 @@ if __name__ == '__main__':
     export_to_vault(
         keepass_db=args.KDBX,
         keepass_password=password,
+        keepass_keyfile=args.keyfile,
         vault_url=args.vault,
         vault_token=token,
         vault_backend=args.backend,
