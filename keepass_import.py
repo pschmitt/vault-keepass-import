@@ -110,6 +110,29 @@ def reset_vault_backend(vault_url, vault_token, vault_backend,
     )
 
 
+def find_similar_entries(vault_url, vault_token, entry_name, ssl_verify=True):
+    client = hvac.Client(
+        url=vault_url, token=vault_token, verify=ssl_verify
+    )
+    entry = client.read(entry_name)
+    entries = [entry] if entry else []
+    index = 2
+    while True:
+        entry = client.read('{} ({})'.format(entry_name, index))
+        if entry:
+            entries.append(entry)
+        else:
+            return entries
+        index += 1
+
+
+def get_next_similar_entry_index(vault_url, vault_token, entry_name,
+                                 ssl_verify=True):
+    return len(find_similar_entries(
+        vault_url, vault_token, entry_name, ssl_verify
+    )) + 1
+
+
 def export_to_vault(keepass_db, keepass_password, keepass_keyfile,
                     vault_url, vault_token, vault_backend, ssl_verify=True,
                     force_lowercase=False):
@@ -124,15 +147,25 @@ def export_to_vault(keepass_db, keepass_password, keepass_keyfile,
         'title' if force_lowercase else 'Title'
     ]
     for e in entries:
+        cleaned_entry = {k: v for k, v in e.items() if k not in ignored_indexes}
         logger.debug(
-            'Insert: {} to {}'.format(
+            'INSERT: "{}" to "{}"'.format(
                 e['_entry_name'],
                 e['_path']
             )
         )
+        entry_path = '{}/{}/{}'.format(
+            vault_backend, e['_path'], e['_entry_name']
+        )
+        if client.read(entry_path):
+            logger.error('Entry {} already exists'.format(entry_path))
+            next_entry_index = get_next_similar_entry_index(
+                vault_url, vault_token, entry_path, ssl_verify
+            )
+            entry_path = '{} ({})'.format(entry_path, next_entry_index)
         client.write(
-            '{}/{}/{}'.format(vault_backend, e['_path'], e['_entry_name']),
-            **{k: v for k, v in e.items() if k not in ignored_indexes}
+            entry_path,
+            **cleaned_entry
         )
 
 
