@@ -14,6 +14,7 @@ import libkeepass
 import logging
 import lxml.etree
 import os
+import re
 import requests
 
 
@@ -59,7 +60,8 @@ def get_group_name(group):
 def clean_str(string):
     return string.strip().strip('/').strip()
 
-def export_entries_from_group(xmldata, group, parent_name=None, force_lowercase=False):
+def export_entries_from_group(xmldata, group, parent_name=None,
+                              force_lowercase=False):
     group_name = get_group_name(group)
     path = '{}{}'.format(
         parent_name if parent_name else '',
@@ -70,7 +72,9 @@ def export_entries_from_group(xmldata, group, parent_name=None, force_lowercase=
     total_entries = []
     for e in entries:
         ed = get_entry_details(e)
-        ed = dict((k.lower() if force_lowercase else k, v) for k, v in ed.iteritems())
+        ed = dict(
+            (k.lower() if force_lowercase else k, v) for k, v in ed.iteritems()
+        )
         ed['_entry_name'] = clean_str(get_entry_name(e))
         ed['_path'] = clean_str('{}'.format(path))
         total_entries.append(ed)
@@ -82,7 +86,8 @@ def export_entries_from_group(xmldata, group, parent_name=None, force_lowercase=
     return total_entries
 
 
-def export_entries(filename, password, keyfile=None, force_lowercase=False):
+def export_entries(filename, password, keyfile=None, force_lowercase=False,
+                   skip_root=False):
     with libkeepass.open(filename, password=password, keyfile=keyfile) as kdb:
         xmldata = lxml.etree.fromstring(kdb.pretty_print())
         tree = lxml.etree.ElementTree(xmldata)
@@ -90,6 +95,11 @@ def export_entries(filename, password, keyfile=None, force_lowercase=False):
         all_entries = export_entries_from_group(
             xmldata, root_group, force_lowercase=force_lowercase
         )
+        if skip_root:
+            regex = re.compile(r'^{}/?'.format(get_group_name(root_group)))
+            for e in all_entries:
+                e['_path'] = regex.sub('', e['_path'])
+
         logger.info('Total entries: {}'.format(len(all_entries)))
         return all_entries
 
@@ -138,9 +148,10 @@ def get_next_similar_entry_index(vault_url, vault_token, entry_name,
 
 def export_to_vault(keepass_db, keepass_password, keepass_keyfile,
                     vault_url, vault_token, vault_backend, ssl_verify=True,
-                    force_lowercase=False):
+                    force_lowercase=False, skip_root=False):
     entries = export_entries(
-        keepass_db, keepass_password, keepass_keyfile, force_lowercase
+        keepass_db, keepass_password, keepass_keyfile, force_lowercase,
+        skip_root
     )
     client = hvac.Client(
         url=vault_url, token=vault_token, verify=ssl_verify
@@ -151,8 +162,10 @@ def export_to_vault(keepass_db, keepass_password, keepass_keyfile,
     ]
     for e in entries:
         cleaned_entry = {k: v for k, v in e.items() if k not in ignored_indexes}
-        entry_path = '{}/{}/{}'.format(
-            vault_backend, e['_path'], e['_entry_name']
+        entry_path = '{}/{}{}'.format(
+            vault_backend,
+            e['_path'] + '/' if e['_path'] else '',
+            e['_entry_name']
         )
         logger.debug(
             'INSERT: "{}" to "{}"'.format(
@@ -204,8 +217,15 @@ if __name__ == '__main__':
     parser.add_argument(
         '-k', '--ssl-no-verify',
         action='store_false',
+        default=True if os.getenv('VAULT_SKIP_VERIFY', False) else False,
         required=False,
         help='Whether to skip TLS cert verification'
+    )
+    parser.add_argument(
+        '-s', '--skip-root',
+        action='store_false',
+        required=False,
+        help='Skip KeePass root folder (shorter paths)'
     )
     parser.add_argument(
         '-b', '--backend',
@@ -242,7 +262,7 @@ if __name__ == '__main__':
         reset_vault_backend(
             vault_url=args.vault,
             vault_token=token,
-            ssl_verify=args.ssl_no_verify,
+            ssl_verify=not args.ssl_no_verify,
             vault_backend=args.backend
         )
     export_to_vault(
@@ -252,6 +272,7 @@ if __name__ == '__main__':
         vault_url=args.vault,
         vault_token=token,
         vault_backend=args.backend,
-        ssl_verify=args.ssl_no_verify,
-        force_lowercase=args.lowercase
+        ssl_verify=not args.ssl_no_verify,
+        force_lowercase=args.lowercase,
+        skip_root=args.skip_root
     )
