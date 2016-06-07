@@ -223,7 +223,7 @@ if __name__ == '__main__':
     )
     parser.add_argument(
         '-s', '--skip-root',
-        action='store_false',
+        action='store_true',
         required=False,
         help='Skip KeePass root folder (shorter paths)'
     )
