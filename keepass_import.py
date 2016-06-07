@@ -216,7 +216,7 @@ if __name__ == '__main__':
     )
     parser.add_argument(
         '-k', '--ssl-no-verify',
-        action='store_false',
+        action='store_true',
         default=True if os.getenv('VAULT_SKIP_VERIFY', False) else False,
         required=False,
         help='Whether to skip TLS cert verification'
@@ -247,6 +247,8 @@ if __name__ == '__main__':
         help='Path to the KeePass database'
     )
     args = parser.parse_args()
+    print(args)
+    exit(2389)
     password = args.password if args.password else getpass.getpass()
     if args.token:
         # If provided argument is a file read from it
