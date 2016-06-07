@@ -247,8 +247,7 @@ if __name__ == '__main__':
         help='Path to the KeePass database'
     )
     args = parser.parse_args()
-    print(args)
-    exit(2389)
+
     password = args.password if args.password else getpass.getpass()
     if args.token:
         # If provided argument is a file read from it
