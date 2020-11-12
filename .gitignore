@@ -3,3 +3,6 @@
 build/
 dist/
 *.spec
+*.kdbx
+.envrc
+venv/
