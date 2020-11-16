@@ -182,27 +182,38 @@ def export_to_vault(
         "title" if force_lowercase else "Title",
     ]
     for e in entries:
-        cleaned_entry = {k: v for k, v in e.items() if k not in ignored_indexes}
-        entry_path = "{}/{}{}".format(
-            vault_backend,
-            e["_path"] + "/" if e["_path"] else "",
-            e["_entry_name"],
-        )
-        logger.debug(
-            'INSERT: "{}" to "{}"'.format(e["_entry_name"], entry_path)
-        )
-        if client.read(entry_path):
-            # There already is an entry at this path
-            next_entry_index = get_next_similar_entry_index(
-                vault_url, vault_token, entry_path, ssl_verify
+        try:
+            cleaned_entry = {
+                k: v for k, v in e.items() if k not in ignored_indexes
+            }
+            entry_path = "{}/{}{}".format(
+                vault_backend,
+                e["_path"] + "/" if e["_path"] else "",
+                e["_entry_name"],
             )
-            new_entry_path = "{} ({})".format(entry_path, next_entry_index)
-            logger.info(
-                'Entry "{}" already exists, '
-                'creating a new one: "{}"'.format(entry_path, new_entry_path)
+            logger.debug(
+                'INSERT: "{}" to "{}"'.format(e["_entry_name"], entry_path)
             )
-            entry_path = new_entry_path
-        client.write(entry_path, **cleaned_entry)
+            if client.read(entry_path):
+                # There already is an entry at this path
+                next_entry_index = get_next_similar_entry_index(
+                    vault_url, vault_token, entry_path, ssl_verify
+                )
+                new_entry_path = "{} ({})".format(entry_path, next_entry_index)
+                logger.info(
+                    'Entry "{}" already exists, '
+                    'creating a new one: "{}"'.format(
+                        entry_path, new_entry_path
+                    )
+                )
+                entry_path = new_entry_path
+            client.write(entry_path, **cleaned_entry)
+        except Exception as ecx:
+            logger.error(
+                "Something went wrong while processing entry {}: {}".format(
+                    e, ecx
+                )
+            )
 
 
 if __name__ == "__main__":
